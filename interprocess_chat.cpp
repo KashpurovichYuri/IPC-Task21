@@ -127,12 +127,15 @@ private:
             }
         });
 
-        std::cout << "Messenges' history:\n";
-        for (const auto & message : *m_vector)
+        if (*m_users != 1)
         {
-            std::cout << message.c_str() << "\n";
+            std::cout << "Messenges' history:\n";
+            for (const auto& message : *m_vector)
+            {
+                std::cout << message.c_str() << "\n";
+            }
+            std::cout << "\n";
         }
-        std::cout << "\n";
     }
 
     void send_message(const std::string & message) 
@@ -142,11 +145,6 @@ private:
         ++(*m_messages);
 
         m_local_messages = *m_messages;
-
-        //if (*m_messages < max_vector_size)
-          //  m_vector->emplace_back(message.c_str());
-        //else
-        //m_vector->emplace(std::next(std::begin(*m_vector), *m_messages), message.c_str());
     }
 
     void write()
@@ -171,15 +169,15 @@ private:
 
 private:
 
-    const std::string shared_memory_name = "shared_memory"; // maybe static?...
-    const std::string m_vector_name      = "shred_history";
-    const std::string m_mutex_name       = "shared_mutex";
-    const std::string m_condition_name   = "shared_condtion";
-    const std::string m_users_name       = "shared_users";
-    const std::string m_messages_name    = "shared_messages";
+    inline static const std::string shared_memory_name = "shared_memory";
+    inline static const std::string m_vector_name      = "shred_history";
+    inline static const std::string m_mutex_name       = "shared_mutex";
+    inline static const std::string m_condition_name   = "shared_condtion";
+    inline static const std::string m_users_name       = "shared_users";
+    inline static const std::string m_messages_name    = "shared_messages";
 
-    const std::string last               = "exit";
-    //const std::size_t max_vector_size    = 10;
+    inline static const std::string last               = "exit";
+    //inline static const std::size_t max_vector_size  = 10;
 
 private:
 
@@ -192,7 +190,7 @@ private:
     vector_t    * m_vector;
     mutex_t     * m_mutex;
     condition_t * m_condition;
-    counter_t   * m_users; // we should correctly see it
+    counter_t   * m_users;
     counter_t   * m_messages;
 
     std::size_t m_local_messages;
