@@ -37,7 +37,7 @@ public:
         m_exit_flag(false),
         m_shared_memory(boost::interprocess::open_or_create, shared_memory_name.c_str(), 65536)
     {
-        m_vector         = m_shared_memory.find_or_construct < vector_t > (m_vector_name.c_str()) (m_shared_memory.get_segment_manager());
+        m_vector         = m_shared_memory.find_or_construct < vector_t > (m_vector_name.c_str()) (max_vector_size, m_shared_memory.get_segment_manager());
         m_mutex          = m_shared_memory.find_or_construct < mutex_t > (m_mutex_name.c_str()) ();
         m_condition      = m_shared_memory.find_or_construct < condition_t > (m_condition_name.c_str()) ();
         m_users          = m_shared_memory.find_or_construct < counter_t > (m_users_name.c_str()) ();
@@ -57,6 +57,8 @@ public:
         write();
 
         reader.join();
+
+        std::unique_lock < mutex_t > lock(*m_mutex);
 
         send_message(m_user_name + " left the chat");
 
@@ -96,10 +98,10 @@ private:
                 }
             });
 
-            if (*m_messages != m_local_messages)
+            if (*m_messages % max_vector_size != m_local_messages)
             {
-                std::cout << m_vector->back() << "\n";
-                m_local_messages = *m_messages;
+                m_local_messages = *m_messages % max_vector_size;
+                std::cout << m_vector->at(m_local_messages) << "\n";
             }
 
             if (m_exit_flag)
@@ -127,24 +129,37 @@ private:
             }
         });
 
-        if (*m_users != 1)
+        if (*m_users != 1 && *m_messages <= max_vector_size)
         {
-            std::cout << "Messenges' history:\n";
-            for (const auto& message : *m_vector)
+            std::cout << "\nAccessible messenges' history:\n";
+            std::size_t i = 0;            
+            while (i < *m_messages)
             {
-                std::cout << message.c_str() << "\n";
+                std::cout << m_vector->at(i) << "\n";
+                ++i;
             }
+            std::cout << "\n";
+        }
+        else if (*m_users != 1)
+        {
+            std::cout << "\nAccessible messenges' history:\n";
+            std::size_t i = max_vector_size;
+            while (i > m_local_messages)
+                std::cout << m_vector->at(--i) << "\n";
+            i = 0;
+            while (i <= m_local_messages)
+                std::cout << m_vector->at(++i) << "\n";
             std::cout << "\n";
         }
     }
 
     void send_message(const std::string & message) 
     {
-        m_vector->emplace_back(message.c_str());
-
         ++(*m_messages);
 
-        m_local_messages = *m_messages;
+        m_local_messages = *m_messages % max_vector_size;
+
+        m_vector->at(m_local_messages) = message.c_str();
     }
 
     void write()
@@ -177,7 +192,7 @@ private:
     inline static const std::string m_messages_name    = "shared_messages";
 
     inline static const std::string last               = "exit";
-    //inline static const std::size_t max_vector_size  = 10;
+    inline static const std::size_t max_vector_size    = 10;
 
 private:
 
