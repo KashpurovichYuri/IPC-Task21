@@ -116,19 +116,6 @@ private:
     {
         std::unique_lock < mutex_t > lock(*m_mutex);
 
-        m_condition->wait(lock, [this]()
-        {
-            if (this->m_mutex->try_lock())
-            {
-                m_mutex->unlock();
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        });
-
         if (*m_users != 1 && *m_messages <= max_vector_size)
         {
             std::cout << "\nAccessible messenges' history:\n";
