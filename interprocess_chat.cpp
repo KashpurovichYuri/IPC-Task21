@@ -40,7 +40,7 @@ public:
         m_shared_memory(boost::interprocess::open_or_create, shared_memory_name.c_str(), 65536)
     {
         m_vector = m_shared_memory.find_or_construct < vector_t >(m_vector_name.c_str()) (m_shared_memory.get_segment_manager());
-        m_cb = m_shared_memory.find_or_construct < circular_buffer_t >(m_cb_name.c_str()) (max_cb_size, m_shared_memory.get_segment_manager());
+        m_cb = m_shared_memory.find_or_construct < circular_buffer_t >(m_cb_name.c_str()) (m_shared_memory.get_segment_manager());
         m_mutex = m_shared_memory.find_or_construct < mutex_t >(m_mutex_name.c_str()) ();
         m_condition = m_shared_memory.find_or_construct < condition_t >(m_condition_name.c_str()) ();
         m_users = m_shared_memory.find_or_construct < counter_t >(m_users_name.c_str()) ();
@@ -100,6 +100,8 @@ private:
             m_local_messages = *m_messages;
 
             std::cout << m_vector->back() << "\n";
+
+            std::cout << "Duplicate: " << m_cb->back() << "\n";
         }
     }
 
@@ -110,9 +112,17 @@ private:
         std::cout << "\nAccessible messenges' history:\n";
         for (auto const & record : *m_vector)
         {
-                std::cout << record << "\n";
+            std::cout << record << "\n";
+        }
+        
+        std::cout << "\n\nOr limited:\n\n";
+        
+        for (auto const & record : *m_cb)
+        {
+            std::cout << record << "\n";
         }
         std::cout << "\n";
+        
     }
 
     void send_message(const std::string& message)
@@ -124,6 +134,8 @@ private:
         m_local_messages++;
 
         m_vector->emplace_back(message.c_str());
+
+        m_cb->push_back( string_t (message.c_str(), m_shared_memory.get_segment_manager()) );
 
         m_condition->notify_all();
     }
